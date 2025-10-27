@@ -6,10 +6,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from app import crud
+from app.api.deps import get_current_active_user
 from app.core.database import engine
 from app.core.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from app.api.deps import get_current_active_user
-from app.models import Token, User
+from app.models import Token, User, UserPublic
 
 router = APIRouter(tags=["login"])
 
@@ -28,7 +28,7 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/test", response_model=User)
+@router.get("/test", response_model=UserPublic)
 async def read_users_me(
         current_user: Annotated[User, Depends(get_current_active_user)],
 ):

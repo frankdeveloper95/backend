@@ -37,12 +37,27 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 async def get_current_active_user(
         current_user: Annotated[User, Depends(get_current_user)],
 ):
-    if not current_user.is_active:
+    if not current_user.estado != 1:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]):
+    if not current_user.rol_id == 1 or current_user.estado == 2:
+        if current_user.estado == 2:
+            raise HTTPException(
+                status_code=403, detail="El usuario está inactivo"
+            )
+        else:
+            raise HTTPException(
+                status_code=403, detail="No tienes los previlegios para realizar esta acción"
+            )
+    return current_user
+
 
 def get_session():
     with Session(engine) as session:
         yield session
+
 
 SessionDep = Annotated[Session, Depends(get_session)]
