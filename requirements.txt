@@ -1,0 +1,16 @@
+fastapi[standard]
+python-multipart
+email-validator
+passlib[bcrypt]
+tenacity
+pydantic
+emails
+jinja2
+alembic
+httpx
+psycopg[binary]
+sqlmodel
+bcrypt==4.3.0
+pydantic-settings
+sentry-sdk[fastapi]
+pyjwt
