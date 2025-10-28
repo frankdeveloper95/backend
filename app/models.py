@@ -11,20 +11,24 @@ class RolEnum(StrEnum):
     USER = "USER"
     GUEST = "GUEST"
 
+
 class Rol(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
-    rol: RolEnum = Field(sa_column=Column(Enum(RolEnum)),default=RolEnum.GUEST)
+    rol: RolEnum = Field(sa_column=Column(Enum(RolEnum)), default=RolEnum.GUEST)
 
     users: list["User"] = Relationship(back_populates="rol")
+
 
 class EstadoEnum(StrEnum):
     ACTIVE = "ACTIVO"
     INACTIVE = "INACTIVO"
 
+
 class Estado(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     estado: EstadoEnum = Field(sa_column=Column(Enum(EstadoEnum)), default=EstadoEnum.ACTIVE)
     users: list["User"] = Relationship(back_populates="estado")
+
 
 class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -41,6 +45,15 @@ class User(SQLModel, table=True):
 
     rol: Rol = Relationship(back_populates="users")
     estado: Estado = Relationship(back_populates="users")
+    operadoras_created: list["Operadora"] = Relationship(
+        back_populates="user_created",
+        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_created]"}
+    )
+    operadoras_updated: list["Operadora"] = Relationship(
+        back_populates="user_updated",
+        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_updated]"}
+    )
+
 
 # Properties to receive via API on creation
 class UserCreate(SQLModel):
@@ -53,27 +66,13 @@ class UserCreate(SQLModel):
     telefono: str | None = Field(default=None, max_length=10)
     cedula: str = Field(max_length=10)
 
-class Token(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-
-# Contents of JWT token
-class TokenPayload(SQLModel):
-    sub: str | None = None
-
-class TokenData(BaseModel):
-    username: str | None = None
-
-class AddUserResponse(BaseModel):
-    email: EmailStr
-    nombre: str
-    apellido: str
 
 class UserPublic(BaseModel):
     id: uuid.UUID
     email: EmailStr
     nombre: str | None
     apellido: str | None
+
 
 class UserUpdate(SQLModel):
     email: EmailStr | None = None
@@ -83,6 +82,63 @@ class UserUpdate(SQLModel):
     rol_id: int | None = None
     estado_id: int | None = None
 
-class DeleteUserResponse(UserPublic):
-    message: str = "User deleted successfully"
-    user: UserPublic
+
+class Operadora(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    nombre: str = Field(max_length=100)
+    razon_social: str = Field(max_length=150)
+    correo: EmailStr = Field(unique=True, max_length=100)
+    telefono: str = Field(unique=True, max_length=10)
+    direccion: str = Field(max_length=100)
+    created_date: datetime.datetime = Field(default_factory=datetime.datetime.now)
+    updated_date: datetime.datetime | None = None
+    id_usuario_created: uuid.UUID = Field(foreign_key="user.id")
+    id_usuario_updated: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+
+    user_created: "User" = Relationship(
+        back_populates="operadoras_created",
+        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_created]"}
+    )
+    user_updated: "User" = Relationship(
+        back_populates="operadoras_updated",
+        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_updated]"}
+    )
+
+
+class OperadoraCreate(SQLModel):
+    nombre: str
+    razon_social: str
+    correo: EmailStr
+    telefono: str
+    direccion: str
+
+
+class OperadoraUpdate(SQLModel):
+    nombre: str | None = None
+    razon_social: str | None = None
+    correo: EmailStr | None = None
+    telefono: str | None = None
+    direccion: str | None = None
+
+
+class OperadoraOut(OperadoraCreate):
+    id: int
+    created_date: datetime.datetime
+    updated_date: datetime.datetime | None
+    id_usuario_created: uuid.UUID
+    user_created: UserPublic
+    user_updated: UserPublic | None
+
+
+# Contents of JWT token
+class Token(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenPayload(SQLModel):
+    sub: str | None = None
+
+
+class TokenData(BaseModel):
+    username: str | None = None
