@@ -2,6 +2,8 @@ import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from app.api.deps import SessionDep
@@ -67,3 +69,16 @@ async def update_guia(
     session.commit()
     session.refresh(guia_db)
     return guia_db
+
+
+@router.delete("/guia/{id}")
+async def delete_guia(
+        id: int,
+        session: SessionDep,
+):
+    guia = session.get(Guia, id)
+    if not guia:
+        raise HTTPException(status_code=404, detail="Guia no encontrado")
+    session.delete(guia)
+    session.commit()
+    return JSONResponse(content={"message": "Guia eliminado", "Guia": jsonable_encoder(guia)})
