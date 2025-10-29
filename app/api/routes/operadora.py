@@ -31,7 +31,7 @@ async def get_operadora(
         offset: int = 0,
         limit: Annotated[int, Query(le=100)] = 100,
 ):
-    operadoras = session.exec(select(Operadora).offset(offset).limit(limit))
+    operadoras = session.exec(select(Operadora).offset(offset).limit(limit)).all()
     return operadoras
 
 

@@ -37,7 +37,6 @@ async def get_user_by_id(user_id: uuid.UUID, session: SessionDep):
 @router.put("/users/{user_id}", response_model=User)
 async def update_user(user_id:uuid.UUID, user: UserUpdate, session: SessionDep):
     user_db = session.get(User, user_id)
-    print(user_db)
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
     if user.email is not None and user.email != user_db.email:

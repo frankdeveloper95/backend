@@ -1,9 +1,10 @@
 import datetime
 import uuid
 from enum import StrEnum
+from typing import Optional
 
 from pydantic import EmailStr, BaseModel
-from sqlmodel import Field, SQLModel, Column, Enum, Relationship
+from sqlmodel import Field, SQLModel, Column, Enum, Relationship, JSON
 
 
 class RolEnum(StrEnum):
@@ -32,8 +33,8 @@ class Estado(SQLModel, table=True):
 
 class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    rol_id: int = Field(foreign_key="rol.id")
-    estado_id: int = Field(foreign_key="estado.id")
+    rol_id: int | None = Field(foreign_key="rol.id")
+    estado_id: int | None = Field(foreign_key="estado.id")
     cedula: str = Field(unique=True, index=True, max_length=10)
     nombre: str = Field(default=None, max_length=255)
     apellido: str = Field(default=None, max_length=255)
@@ -45,13 +46,25 @@ class User(SQLModel, table=True):
 
     rol: Rol = Relationship(back_populates="users")
     estado: Estado = Relationship(back_populates="users")
-    operadoras_created: list["Operadora"] = Relationship(
-        back_populates="user_created",
-        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_created]"}
+    operadora_created_user: Optional["Operadora"] = Relationship(
+        back_populates="users_operadora_created",
+        sa_relationship_kwargs={"foreign_keys": "Operadora.id_usuario_created"}
     )
-    operadoras_updated: list["Operadora"] = Relationship(
-        back_populates="user_updated",
-        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_updated]"}
+    operadora_updated_user: Optional["Operadora"] = Relationship(
+        back_populates="users_operadora_updated",
+        sa_relationship_kwargs={"foreign_keys": "Operadora.id_usuario_updated"}
+    )
+    guia_usuario_id: Optional["Guia"] = Relationship(
+        back_populates="usuario",
+        sa_relationship_kwargs={"foreign_keys": "Guia.id_usuario"}
+    )
+    guia_usuario_created: Optional["Guia"] = Relationship(
+        back_populates="usuario_created",
+        sa_relationship_kwargs={"foreign_keys": "Guia.id_usuario_created"}
+    )
+    guia_usuario_updated: Optional["Guia"] = Relationship(
+        back_populates="usuario_updated",
+        sa_relationship_kwargs={"foreign_keys": "Guia.id_usuario_updated"}
     )
 
 
@@ -92,16 +105,16 @@ class Operadora(SQLModel, table=True):
     direccion: str = Field(max_length=100)
     created_date: datetime.datetime = Field(default_factory=datetime.datetime.now)
     updated_date: datetime.datetime | None = None
-    id_usuario_created: uuid.UUID = Field(foreign_key="user.id")
+    id_usuario_created: uuid.UUID | None = Field(foreign_key="user.id")
     id_usuario_updated: uuid.UUID | None = Field(default=None, foreign_key="user.id")
 
-    user_created: "User" = Relationship(
-        back_populates="operadoras_created",
-        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_created]"}
+    users_operadora_created: User = Relationship(
+        back_populates="operadora_created_user",
+        sa_relationship_kwargs={"foreign_keys": "Operadora.id_usuario_created"}
     )
-    user_updated: "User" = Relationship(
-        back_populates="operadoras_updated",
-        sa_relationship_kwargs={"foreign_keys": "[Operadora.id_usuario_updated]"}
+    users_operadora_updated: User = Relationship(
+        back_populates="operadora_updated_user",
+        sa_relationship_kwargs={"foreign_keys": "Operadora.id_usuario_updated"}
     )
 
 
@@ -125,9 +138,52 @@ class OperadoraOut(OperadoraCreate):
     id: int
     created_date: datetime.datetime
     updated_date: datetime.datetime | None
-    id_usuario_created: uuid.UUID
-    user_created: UserPublic
-    user_updated: UserPublic | None
+    id_usuario_created: uuid.UUID | None
+    id_usuario_updated: uuid.UUID | None
+
+
+class Guia(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    id_usuario: uuid.UUID | None = Field(unique=True,default=None, foreign_key="user.id")
+    id_operadora: int | None = Field(default=None, foreign_key="operadora.id")
+    calificacion: float | None = None
+    idiomas: list[str] | None = Field(default=None, sa_column=Column(JSON))
+    created_date: datetime.datetime = Field(default_factory=datetime.datetime.now)
+    updated_date: datetime.datetime | None = None
+    id_usuario_created: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    id_usuario_updated: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+
+    usuario: User | None = Relationship(back_populates="guia_usuario_id",
+                                        sa_relationship_kwargs={"foreign_keys": "Guia.id_usuario"})
+    usuario_created: User | None = Relationship(back_populates="guia_usuario_created",
+                                                sa_relationship_kwargs={"foreign_keys": "Guia.id_usuario_created"})
+    usuario_updated: User | None = Relationship(back_populates="guia_usuario_updated",
+                                                sa_relationship_kwargs={"foreign_keys": "Guia.id_usuario_updated"})
+
+
+class GuiaCreate(SQLModel):
+    id_usuario: uuid.UUID | None
+    id_operadora: int | None = None
+    calificacion: float | None = None
+    idiomas: list[str]
+
+
+class GuiaWithUser(SQLModel):
+    id: int
+    id_usuario: uuid.UUID | None
+    usuario: UserPublic
+    id_operadora: int | None
+    calificacion: float | None
+    idiomas: list[str] | None
+    created_date: datetime.datetime
+    updated_date: datetime.datetime | None
+    id_usuario_created: uuid.UUID | None
+    id_usuario_updated: uuid.UUID | None
+
+class GuiaUpdate(SQLModel):
+    id_operadora: int | None = None
+    calificacion: float | None = None
+    idiomas: list[str] | None = None
 
 
 # Contents of JWT token
